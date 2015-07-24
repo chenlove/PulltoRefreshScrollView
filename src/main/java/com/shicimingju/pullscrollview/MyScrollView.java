@@ -5,11 +5,8 @@ import android.graphics.Canvas;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.TextView;
 
 /**
  * Created by chenguoming on 15/7/24.
@@ -28,17 +25,11 @@ public class MyScrollView extends ScrollView{
 
     public MyScrollView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
     }
     public MyScrollView(Context context) {
         super(context);
-        init();
     }
-    public onPullToRefreshListener getmOnPullToRefreshListener() {
-        return mOnPullToRefreshListener;
-    }
-    public void init(){
-    }
+
     public void setOnPullToRefreshListener(onPullToRefreshListener mOnPullToRefreshListener) {
         this.mOnPullToRefreshListener = mOnPullToRefreshListener;
     }
@@ -68,9 +59,19 @@ public class MyScrollView extends ScrollView{
         }
         return super.onInterceptTouchEvent(event);
     }
+
+    /**
+     * true is refreshing
+     * @return
+     */
     public boolean isPulling(){
         return isPulling;
     }
+
+    /**
+     * called by {@link #onInterceptHoverEvent(MotionEvent)} or {@link #onTouchEvent(MotionEvent)}
+     * @param event
+     */
     public void onDown(MotionEvent event){
         if(getScrollY() == 0){
             lastY =  downRawY = event.getRawY();
@@ -78,6 +79,11 @@ public class MyScrollView extends ScrollView{
         }
         Log.d(TAG, "ACTION_DOWN:" + event.getRawY());
     }
+
+    /**
+     * if ScrollView is pulling will call it
+     * @param event
+     */
     public void onPullMove(MotionEvent event){
         getChildAt(0).setPadding(0,-getHeadHeight ()+(int) ((event.getRawY() - downRawY) * 0.5), 0, 0);
         Log.d(TAG, "ACTION_MOVE:" + event.getRawY());
@@ -101,7 +107,7 @@ public class MyScrollView extends ScrollView{
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if(((ViewGroup)getChildAt(0)).getChildAt(0).getPaddingTop() == 0&&!isPulling()){
+        if(getChildAt(0).getPaddingTop() == 0&&!isPulling()){
             getChildAt(0).setPadding(0, -getHeadHeight(), 0, 0);
         }
         super.onDraw(canvas);
@@ -127,25 +133,50 @@ public class MyScrollView extends ScrollView{
                 case MotionEvent.ACTION_UP:
                     Log.d(TAG, "ACTION_UP:" + event.getRawY());
                     if (isPulling) {
-                        getChildAt(0).setPadding(0,-getHeadHeight(),0,0);
                         isPulling = false;
                         if(refreshAble){
+                            getChildAt(0).setPadding(0,1,0,0);
                             if(mOnPullToRefreshListener!=null){
                                 mOnPullToRefreshListener.onPullToRefresh();
                             }
+                        }else{
+                            getChildAt(0).setPadding(0,-getHeadHeight(),0,0);
+
                         }
                         return true;
                     }
             }
         return super.onTouchEvent(event);
     }
+
+    /**
+     * you can implement this interface to do something
+     * when begin refresh
+     */
     public interface onPullToRefreshListener{
         void onPullToRefresh();
     }
+
+    /**
+     * you can implement this interface to do something
+     * when refreshable is changed
+     */
     public interface onRefreshAbleStatusChangedListener{
         void onRefreshAble(boolean refreshAble);
     }
+
+    /**
+     * get the header height.
+     * @return
+     */
     private int getHeadHeight(){
         return ((ViewGroup)getChildAt(0)).getChildAt(0).getMeasuredHeight();
+    }
+
+    /**
+     * when refresh completed invoke.
+     */
+    public void refreshCompleted(){
+        getChildAt(0).setPadding(0,-getHeadHeight(),0,0);
     }
 }
